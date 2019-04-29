@@ -31,6 +31,10 @@ RT = move vertical motors
 
 """
 
+#a very long fuction which just returns controller values
+def setControlVar(data):
+    return data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17]
+
 #this function splits the incoming string which contains xbox controller input into
 #an array of integers (for the buttons) and floating point numbers (for others)
 def splitData(data):
@@ -68,6 +72,13 @@ class controlsClass:
             kit.motor1.throttle = -1.0 #change sign according to polarity
         else:
             kit.motor1.throttle = 0
+    #this function turns the lights on or off when (some button) is pressed
+    def lights(self, button):
+        if button: #set as a toggle when you fix it
+            #lights on
+        else:
+            #lights off
+    def 
 
 """
 This is the actual start of the main loop which checks for data being
@@ -112,7 +123,8 @@ while True:
         #stop all motors
         print("HOLD")
     data = splitData(data)
-    controls.claw(data[0], data[1])
+    A, B, X, Y, LH, RH, DU, DD, DL, DR, LB, RB, LX, LY, RX, RY, LT, RT = setControllerVar(data)
+    controls.claw(A, B)
     """
     data[0], prevVal = buttonToggle(data[0], prevVal) fix this toggle
     print("")
