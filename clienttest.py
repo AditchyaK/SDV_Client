@@ -6,6 +6,33 @@ host = '169.254.227.12'
 prevVal = 0
 keys = ("AB", "BB", "XB", "YB", "LH", "RH", "DU", "DD", "DL", "DR", "LB", "RB", "LX", "LY", "RX", "RY", "LT", "RT", "END")
 
+"""
+AB = minirov motor backwards
+BB = minirov motor forwards
+XB = minirov winch backwards
+YB = minirov winch forwards
+
+LH = toggle lights
+RH = 
+
+DU = 
+DD = 
+DL = 
+DR = 
+
+LB = Toggle Claw open/close
+RB = Toggle vertical motors up/down
+
+LX = 
+LY = Left motor forward/back
+RX = 
+RY = Right motor forward/back
+
+LT = move claw
+RT = move vertical motors
+
+"""
+
 def splitData(data):
     datatru = []
     datanu = data.split(keys[0])

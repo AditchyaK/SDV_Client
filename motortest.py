@@ -4,5 +4,6 @@ from adafruit_motor import stepper
 
 kit = MotorKit()
 
-for i in range(100):
-    kit.stepper2.onestep()
+kit.motor2.throttle = 1.0
+time.sleep(1)
+kit.motor2.throttle = 0
