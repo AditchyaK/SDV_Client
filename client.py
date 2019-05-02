@@ -53,11 +53,46 @@ def splitData(data):
 
 #this class contains all the control methods such as for the claw, motors and lights
 class controlsClass:
-    def thrusterTest(self, axis, n, d):
+    #P1 and P2 are forward and backward thrusters+
+    def thruster200P1(self, axis, n, d):
         nu = n
         axis *= d
         nu += axis
         pwm.set_pwm(1, 1, int(nu))
+    def thruster200P2(self, axis, n, d):
+        nu = n
+        axis *= d
+        nu += axis
+        pwm.set_pwm(2, 1, int(nu))
+
+    #P3 to P6 are up and down thrusters
+    def thruster100P3(self, axis, n, d):
+        nu = n
+        axis *= d
+        nu += axis
+        pwm.set_pwm(3, 1, int(nu))
+    def thruster100P4(self, axis, n, d):
+        nu = n
+        axis *= d
+        nu += axis
+        pwm.set_pwm(4, 1, int(nu))
+    def thruster100P5(self, axis, n, d):
+        nu = n
+        axis *= d
+        nu += axis
+        pwm.set_pwm(5, 1, int(nu)):
+    def thruster100P6(self, axis, n, d):
+        nu = n
+        axis *= d
+        nu += axis
+        pwm.set_pwm(6, 1, int(nu))
+
+    def camServoP7():
+        #figure out servo controls
+
+    def lightsP8():
+        #figure out light controls
+        
     #this claw function is responsible for controlling the claw with two buttons
     def claw(self, button1, button2):
         if button1:
@@ -66,14 +101,7 @@ class controlsClass:
             kit.motor1.throttle = -1.0 #change sign according to polarity
         else:
             kit.motor1.throttle = 0
-    #this function turns the lights on or off when (some button) is pressed
-    """
-    def lights(self, button):
-        if button: #set as a toggle when you fix it
-            return True #lights on
-        else:
-            return False #lights off
-    """
+        
 
 """
 This is the actual start of the main loop which checks for data being
@@ -126,14 +154,17 @@ while True:
     #this disconnects the client (this device) from the server
     print("")
     if (data == "KILL"):
-        pwm.set_pwm(1, 1, int(n))
-        time.sleep(1)
-        pwm.set_pwm(1, 0, int(0))
-        print("Motors have shut down!")
+        for i in range(6):
+            i += 1
+            pwm.set_pwm(i, 1, int(n))
+            time.sleep(1)
+            pwm.set_pwm(i, 0, int(0))
         break
     #this is to set motors to stop when the controller is disconnected
     elif (data == "HOLD"):
-        #stop all motors
+        for i in range(6):
+            i += 1
+            pwm.set_pwm(i, 1, int(n))
         print("HOLD")
         break
     try:
