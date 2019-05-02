@@ -1,7 +1,6 @@
-import sys, socket, time
+import sys, socket, time, Adafruit_PCA9685
 from adafruit_motorkit import MotorKit
 
-prevVal = 0
 keys = ("AB", "BB", "XB", "YB", "LH", "RH", "DU", "DD", "DL", "DR", "LB", "RB", "LX", "LY", "RX", "RY", "LT", "RT", "END")
 
 """
@@ -41,7 +40,7 @@ def splitData(data):
     datatru = []
     datanu = data.split(keys[0])
     for i in range(len(keys)-1):
-        i+= 1
+        i += 1
         datanu = datanu[1].split(keys[i], 1)
         datatru.append(datanu[0])
     for i in range(len(datatru)):
@@ -51,19 +50,14 @@ def splitData(data):
             datatru[i] = float(datatru[i])
     return datatru
 
-#WIP: this function is responsible for toggling a button 
-def buttonToggle(buttonVal, prevVal):
-    if buttonVal:
-        if (prevVal == 0):
-            prevVal = 1
-        else:
-            prevVal = 0
-        return prevVal, prevVal
-    else:
-        return prevVal, buttonVal
 
 #this class contains all the control methods such as for the claw, motors and lights
 class controlsClass:
+    def thrusterTest(self, axis, n, d):
+        nu = n
+        axis *= d
+        nu += axis
+        pwm.set_pwm(1, 1, int(nu))
     #this claw function is responsible for controlling the claw with two buttons
     def claw(self, button1, button2):
         if button1:
@@ -73,17 +67,22 @@ class controlsClass:
         else:
             kit.motor1.throttle = 0
     #this function turns the lights on or off when (some button) is pressed
+    """
     def lights(self, button):
         if button: #set as a toggle when you fix it
-            #lights on
+            return True #lights on
         else:
-            #lights off
-    def 
+            return False #lights off
+    """
 
 """
 This is the actual start of the main loop which checks for data being
 sent by the server and converting it to an array of values to use as controls
 """
+#initialize variables for thruster control
+n = 1260
+d = 300
+
 #initializing controls class
 controls = controlsClass()
 
@@ -94,7 +93,16 @@ try:
 except:
     print("Motor Class could not be initialized")
 
-#creating a scoket and then setting it to resuse the port when shut down
+#initializing PWM class
+try:
+    pwm = Adafruit_PCA9685.PCA9685()
+except:
+    print("Could not initialize PCA9685")
+    sys.exit()
+
+pwm.set_pwm(1, 1, int(n))
+
+#creating a socket and then setting it to resuse the port when shut down
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 print("Socket has been created")
@@ -116,24 +124,30 @@ while True:
     data = s.recv(1024)
     data = data.decode('utf-8')
     #this disconnects the client (this device) from the server
+    print("")
     if (data == "KILL"):
+        pwm.set_pwm(1, 1, int(n))
+        time.sleep(1)
+        pwm.set_pwm(1, 0, int(0))
+        print("Motors have shut down!")
         break
     #this is to set motors to stop when the controller is disconnected
     elif (data == "HOLD"):
         #stop all motors
         print("HOLD")
-    data = splitData(data)
-    A, B, X, Y, LH, RH, DU, DD, DL, DR, LB, RB, LX, LY, RX, RY, LT, RT = setControllerVar(data)
-    controls.claw(A, B)
-    """
-    data[0], prevVal = buttonToggle(data[0], prevVal) fix this toggle
-    print("")
-    for i in range(len(data)):
-        print(str(data[i]), end=" ")
-    """
+        break
+    try:
+        data = splitData(data)
+        for i in range(len(data)):
+            print(str(data[i]), end=" ")
+    except:
+        print("No Data")
 
+    controls.thrusterTest(data[15], n, d)
+    #A, B, X, Y, LH, RH, DU, DD, DL, DR, LB, RB, LX, LY, RX, RY, LT, RT = setControllerVar(data)
+    #controls.claw(A, B)
+        
 #cleaning up everything at the end
-conn.close()
 s.close()
 print("\nYou have been disconnected from the server")
 sys.exit()
