@@ -1,3 +1,5 @@
+#code for the thrusters
+"""
 import sys, time, Adafruit_PCA9685
 
 try:
@@ -5,7 +7,7 @@ try:
 except:
     print ("Could not initialize PCA9685")
     sys.exit()
-
+    
 pwm.set_pwm(1, 1, int(1260))
 print("Initializing motors...")
 time.sleep(7)
@@ -21,7 +23,9 @@ time.sleep(2)
 print("Shutting down")
 pwm.set_pwm(1, 0, int(0))
 sys.exit()
+"""
 
+#code for the actuator
 """
 import time
 from adafruit_motorkit import MotorKit
@@ -31,7 +35,10 @@ kit = MotorKit(address = 0x60)
 kit.motor1.throttle = 1.0
 time.sleep(2)
 kit.motor1.throttle = 0
+"""
 
+#code for stepper motor
+"""
 from adafruit_motorkit import MotorKit
 from adafruit_motor import stepper
 
@@ -41,3 +48,14 @@ while True:
     for i in range(200):
         kit.stepper2.onestep(style=stepper.SINGLE)
 """
+#code for the camera servo
+import time
+from adafruit_servokit import ServoKit
+kit = ServoKit(channels=16)
+
+#kit.servo[4].set_pulse_width_range(10, 2000)
+
+kit.servo[4].angle = 180
+time.sleep(1)
+kit.servo[4].angle = 0
+time.sleep(1)

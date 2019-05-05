@@ -1,5 +1,7 @@
 import sys, socket, time, Adafruit_PCA9685
 from adafruit_motorkit import MotorKit
+from adafruit_motor import stepper
+from adafruit_servokit import ServoKit
 
 keys = ("AB", "BB", "XB", "YB", "LH", "RH", "DU", "DD", "DL", "DR", "LB", "RB", "LX", "LY", "RX", "RY", "LT", "RT", "END")
 
@@ -58,37 +60,40 @@ class controlsClass:
         nu = n
         axis *= d
         nu += axis
-        pwm.set_pwm(1, 1, int(nu))
+        pwm.set_pwm(0, 1, int(nu))
     def thruster200P2(self, axis, n, d):
         nu = n
         axis *= d
         nu += axis
-        pwm.set_pwm(2, 1, int(nu))
+        pwm.set_pwm(1, 1, int(nu))
 
     #P3 to P6 are up and down thrusters
-    def thruster100P3(self, axis, n, d):
+    def thruster200P3(self, axis, n, d):
+        nu = n
+        axis *= d
+        nu += axis
+        pwm.set_pwm(2, 1, int(nu))
+    def thruster200P4(self, axis, n, d):
         nu = n
         axis *= d
         nu += axis
         pwm.set_pwm(3, 1, int(nu))
-    def thruster100P4(self, axis, n, d):
+    def thruster100LP5(self, axis, n, d):
         nu = n
         axis *= d
         nu += axis
-        pwm.set_pwm(4, 1, int(nu))
-    def thruster100P5(self, axis, n, d):
+        pwm.set_pwm(4, 1, int(nu)):
+    def thruster100RP6(self, axis, n, d):
         nu = n
         axis *= d
         nu += axis
-        pwm.set_pwm(5, 1, int(nu)):
-    def thruster100P6(self, axis, n, d):
-        nu = n
-        axis *= d
-        nu += axis
-        pwm.set_pwm(6, 1, int(nu))
+        pwm.set_pwm(5, 1, int(nu))
 
-    def camServoP7():
-        #figure out servo controls
+    def camServoP7(self, button1, button2):
+        if button1:
+            Skit.servo[4].angle = 180 #change this for the actual test
+        elif button2:
+            Skit.servo[4].angle = 0 #change this too
 
     def lightsP8():
         #figure out light controls
@@ -96,39 +101,56 @@ class controlsClass:
     #this claw function is responsible for controlling the claw with two buttons
     def claw(self, button1, button2):
         if button1:
-            kit.motor1.throttle = 1.0 #change sign according to polarity
+            Mkit.motor1.throttle = 1.0 #change sign according to polarity
         elif button2:
-            kit.motor1.throttle = -1.0 #change sign according to polarity
+            Mkit.motor1.throttle = -1.0 #change sign according to polarity
         else:
-            kit.motor1.throttle = 0
-        
+            Mkit.motor1.throttle = 0
+
+def dataSplitProp(data):
+    datanu = []
+    datatru = [None]*18
+    for i in range(len(datatru)):
+        datanu = data.split(" ", 1)
 
 """
 This is the actual start of the main loop which checks for data being
 sent by the server and converting it to an array of values to use as controls
 """
 #initialize variables for thruster control
-n = 1260
-d = 300
+n1 = 1260
+d1 = 300
 
 #initializing controls class
 controls = controlsClass()
 
 #initalizing the MotorKit class
 try:
-    kit = MotorKit()
+    Mkit = MotorKit()
     print("Motor Class has been initialized")
 except:
     print("Motor Class could not be initialized")
 
+time.sleep(1)
+
 #initializing PWM class
 try:
     pwm = Adafruit_PCA9685.PCA9685()
+    print("PWM Class has been initialized")
 except:
     print("Could not initialize PCA9685")
     sys.exit()
 
-pwm.set_pwm(1, 1, int(n))
+time.sleep(1)
+pwm.set_pwm(1, 1, int(n1))
+
+try:
+    Skit = ServoKit(channels=16)
+    print("Servo Class has been initialized")
+except:
+    print("Servo Class could not be initialized")
+
+time.sleep(1)
 
 #creating a socket and then setting it to resuse the port when shut down
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -156,15 +178,16 @@ while True:
     if (data == "KILL"):
         for i in range(6):
             i += 1
-            pwm.set_pwm(i, 1, int(n))
+            pwm.set_pwm(i, 1, int(n1))
             time.sleep(1)
             pwm.set_pwm(i, 0, int(0))
         break
+    
     #this is to set motors to stop when the controller is disconnected
     elif (data == "HOLD"):
         for i in range(6):
             i += 1
-            pwm.set_pwm(i, 1, int(n))
+            pwm.set_pwm(i, 1, int(n1))
         print("HOLD")
         break
     try:
@@ -174,10 +197,10 @@ while True:
     except:
         print("No Data")
 
-    controls.thrusterTest(data[15], n, d)
-    #A, B, X, Y, LH, RH, DU, DD, DL, DR, LB, RB, LX, LY, RX, RY, LT, RT = setControllerVar(data)
-    #controls.claw(A, B)
-        
+    A, B, X, Y, LH, RH, DU, DD, DL, DR, LB, RB, LX, LY, RX, RY, LT, RT = setControllerVar(data)
+    controls.thrusterR200P1(RY, n1, d1)
+    controls.thrusterL200P2(LY, n1, d1)
+    
 #cleaning up everything at the end
 s.close()
 print("\nYou have been disconnected from the server")
