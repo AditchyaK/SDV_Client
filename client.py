@@ -1,4 +1,4 @@
-import sys, socket, time, Adafruit_PCA9685
+import sys, socket, time, Adafruit_PCA9685, os
 from adafruit_motorkit import MotorKit
 from adafruit_motor import stepper
 from adafruit_servokit import ServoKit
@@ -6,13 +6,15 @@ from adafruit_servokit import ServoKit
 keys = ("AB", "BB", "XB", "YB", "LH", "RH", "DU", "DD", "DL", "DR", "LB", "RB", "LX", "LY", "RX", "RY", "LT", "RT", "END")
 
 """
+Option 1
+
 AB = minirov motor backwards
 BB = minirov motor forwards
 XB = minirov winch backwards
 YB = minirov winch forwards
 
-LH = toggle lights
-RH = 
+LH = 
+RH = toggle lights
 
 DU = 
 DD = 
@@ -23,17 +25,42 @@ LB = Toggle Claw open/close
 RB = Toggle vertical motors up/down
 
 LX = 
-LY = Left motor forward/back
+LY = left motor forward/back
 RX = 
-RY = Right motor forward/back
+RY = right motor forward/back
 
 LT = move claw
 RT = move vertical motors
 
+Option 2
+
+AB = minirov motor backwards
+BB = minirov motor forwards
+XB = minirov winch backwards
+YB = minirov winch forwards
+
+LH = 
+RH = toggle lights
+
+DU = 
+DD = 
+DL = 
+DR = 
+
+LB = claw open
+RB = claw close
+
+LX = yaw side motors
+LY = up/dowm verical motors 
+RX = roll vertical motors
+RY = pitch vertical motors
+
+LT = forward for side motors
+RT = backward for side motors
 """
 
 #a very long fuction which just returns controller values
-def setControlVar(data):
+def setControllerVar(data):
     return data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17]
 
 #this function splits the incoming string which contains xbox controller input into
@@ -51,39 +78,69 @@ def splitData(data):
         except:
             datatru[i] = float(datatru[i])
     return datatru
+#--------------------------------------------------------------------------
+#External thermometer address: 28-031897792ede
 
+os.system('modprobe w1-gpio')
+os.system('modprobe w1-therm')
 
+temp_sensor = '/sys/bus/w1/devices/28-031897792ede/w1_slave'
+
+def temp_raw():
+    
+    f = open(temp_sensor, 'r')
+    lines = f.readlines()
+    f.close()
+    return lines
+
+def read_temp():
+    
+    lines = temp_raw()
+    while lines[0].strip()[-3:] != 'YES':
+        lines = temp_raw()
+        
+    temp_output = lines[1].find('t=')
+    
+    if temp_output != -1:
+        temp_string = lines [1].strip()[temp_output+2:]
+        temp_c = float(temp_string) / 1000.0
+        return temp_c
+    
+#-----------------------------------------------------------------------------
 #this class contains all the control methods such as for the claw, motors and lights
-class controlsClass:
-    #P1 and P2 are forward and backward thrusters+
-    def thruster200P1(self, axis, n, d):
+class controlsClass(Mkit, Skit, pwm):
+    #P1 and P2 are forward and backward thrusters
+    def thruster100LP1(self, axis, n, d):
         nu = n
         axis *= d
         nu += axis
-        pwm.set_pwm(0, 1, int(nu))
-    def thruster200P2(self, axis, n, d):
+        if axis:
+            pwm.set_pwm(0, 1, int(nu))
+    def thruster100RP2(self, axis, n, d):
         nu = n
         axis *= d
         nu += axis
-        pwm.set_pwm(1, 1, int(nu))
+        if axis:
+            pwm.set_pwm(1, 1, int(nu))
 
     #P3 to P6 are up and down thrusters
-    def thruster200P3(self, axis, n, d):
+    def thruster200FP3(self, axis, n, d):
         nu = n
         axis *= d
         nu += axis
-        pwm.set_pwm(2, 1, int(nu))
-    def thruster200P4(self, axis, n, d):
+        if axis:
+            pwm.set_pwm(2, 1, int(nu))
+    def thruster200FP4(self, axis, n, d):
         nu = n
         axis *= d
         nu += axis
         pwm.set_pwm(3, 1, int(nu))
-    def thruster100LP5(self, axis, n, d):
+    def thruster200BP5(self, axis, n, d):
         nu = n
         axis *= d
         nu += axis
-        pwm.set_pwm(4, 1, int(nu)):
-    def thruster100RP6(self, axis, n, d):
+        pwm.set_pwm(4, 1, int(nu))
+    def thruster200BP6(self, axis, n, d):
         nu = n
         axis *= d
         nu += axis
@@ -95,34 +152,29 @@ class controlsClass:
         elif button2:
             Skit.servo[4].angle = 0 #change this too
 
-    def lightsP8():
-        #figure out light controls
-        
-    #this claw function is responsible for controlling the claw with two buttons
-    def claw(self, button1, button2):
+    def stopAllMotors(n1, off):
+        for i in range(6):
+            pwm.set_pwm(i, 1, int(n1))
+        time.sleep(1)
+        if off:
+            for i in range(6):
+                pwm.set_pwm(i, 0, int(0))
+            
+    def claw (self, button1, button2):
         if button1:
-            Mkit.motor1.throttle = 1.0 #change sign according to polarity
+            Mkit.motor1.throttle = 1.0
         elif button2:
-            Mkit.motor1.throttle = -1.0 #change sign according to polarity
+            Mkit.motor1.throttle = -1.0
         else:
             Mkit.motor1.throttle = 0
-
-def dataSplitProp(data):
-    datanu = []
-    datatru = [None]*18
-    for i in range(len(datatru)):
-        datanu = data.split(" ", 1)
-
 """
 This is the actual start of the main loop which checks for data being
 sent by the server and converting it to an array of values to use as controls
 """
+#----------------------------------------------------------------------------
 #initialize variables for thruster control
 n1 = 1260
 d1 = 300
-
-#initializing controls class
-controls = controlsClass()
 
 #initalizing the MotorKit class
 try:
@@ -142,8 +194,10 @@ except:
     sys.exit()
 
 time.sleep(1)
-pwm.set_pwm(1, 1, int(n1))
+for i in range(6):
+    pwm.set_pwm(i, 1, int(n1))
 
+#Servo Class initalizes here
 try:
     Skit = ServoKit(channels=16)
     print("Servo Class has been initialized")
@@ -151,6 +205,10 @@ except:
     print("Servo Class could not be initialized")
 
 time.sleep(1)
+
+
+#initializing controls class
+controls = controlsClass(Mkit, Skit, pwm)
 
 #creating a socket and then setting it to resuse the port when shut down
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -161,6 +219,7 @@ print("Socket has been created")
 port = 5558
 host = '169.254.227.12'
 
+#--------------------------------------------------------------------
 #client socket connects to the server with static ip address
 try: 
     s.connect((host, port))
@@ -172,24 +231,20 @@ except socket.error as msg:
 #then sending respective input to the cntroller class which operates motors
 while True:
     data = s.recv(1024)
-    data = data.decode('utf-8')
+    data = data.decode('utf-6')
+    
     #this disconnects the client (this device) from the server
     print("")
     if (data == "KILL"):
-        for i in range(6):
-            i += 1
-            pwm.set_pwm(i, 1, int(n1))
-            time.sleep(1)
-            pwm.set_pwm(i, 0, int(0))
+        stopAllMotors(n1, 1)
         break
     
     #this is to set motors to stop when the controller is disconnected
     elif (data == "HOLD"):
-        for i in range(6):
-            i += 1
-            pwm.set_pwm(i, 1, int(n1))
-        print("HOLD")
-        break
+        stopAllMotors(n1, 0)
+        break #change this for actual test
+
+    #the data is split up into an array of integers and floating point values
     try:
         data = splitData(data)
         for i in range(len(data)):
@@ -197,9 +252,44 @@ while True:
     except:
         print("No Data")
 
+    #button names are added for easy access
     A, B, X, Y, LH, RH, DU, DD, DL, DR, LB, RB, LX, LY, RX, RY, LT, RT = setControllerVar(data)
-    controls.thrusterR200P1(RY, n1, d1)
-    controls.thrusterL200P2(LY, n1, d1)
+
+    #claw controls (RB out, LB in)
+    controls.claw(RB, LB)
+
+    #moving up or down
+    controls.thruster200FP3(LY, n1, d1)
+    controls.thruster200FP4(LY, n1, d1)
+    controls.thruster200BP5(LY, n1, d1)
+    controls.thruster200BP6(LY, n1, d1)
+
+    #yawing left to right
+    controls.thruster100LP1(LX, n1, d1)
+    controls.thruster100RP2((-LX), n1, d1)
+
+    #side motors forawrd or backward
+    if LT and not RT:
+        controls.thruster100LP1((-LT), n1, d1)
+        controls.thruster100RP2((-LT), n1, d1)
+    elif RT and not RT:
+        controls.thruster100LP1(RT, n1, d1)
+        controls.thruster100RP2(RT, n1, d1)
+
+    #pitching foward and backward
+    if (RY > 0):
+        controls.thruster200FP3((-RY), n1, d1)
+        controls.thruster200FP4((-RY), n1, d1)
+        controls.thruster200BP5(RY, n1, d1)
+        controls.thruster200BP6(RY, n1, d1)
+    elif (RY < 0):
+        controls.thruster200FP3(RY, n1, d1)
+        controls.thruster200FP4(RY, n1, d1)
+        controls.thruster200BP5((-RY), n1, d1)
+        controls.thruster200BP6((-RY), n1, d1)
+
+    #roll side to side
+    if (RX)
     
 #cleaning up everything at the end
 s.close()
