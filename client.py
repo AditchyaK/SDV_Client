@@ -1,4 +1,4 @@
-import sys, socket, time, Adafruit_PCA9685, os
+import sys, socket, time, Adafruit_PCA9685, os, subprocess
 from adafruit_motorkit import MotorKit
 from adafruit_motor import stepper
 from adafruit_servokit import ServoKit
@@ -108,15 +108,15 @@ def read_temp():
     
 #-----------------------------------------------------------------------------
 #this class contains all the control methods such as for the claw, motors and lights
-class controlsClass(Mkit, Skit, pwm):
+class controlsClass():
     #P1 and P2 are forward and backward thrusters
-    def thruster100LP1(self, axis, n, d):
+    def thruster100LP1(self, pwm, axis, n, d):
         nu = n
         axis *= d
         nu += axis
         if axis:
             pwm.set_pwm(0, 1, int(nu))
-    def thruster100RP2(self, axis, n, d):
+    def thruster100RP2(self, pwm, axis, n, d):
         nu = n
         axis *= d
         nu += axis
@@ -124,33 +124,27 @@ class controlsClass(Mkit, Skit, pwm):
             pwm.set_pwm(1, 1, int(nu))
 
     #P3 to P6 are up and down thrusters
-    def thruster200FP3(self, axis, n, d):
+    def thruster200FLP3(self, pwm, axis, n, d):
         nu = n
         axis *= d
         nu += axis
         if axis:
             pwm.set_pwm(2, 1, int(nu))
-    def thruster200FP4(self, axis, n, d):
+    def thruster200FRP4(self, pwm, axis, n, d):
         nu = n
         axis *= d
         nu += axis
         pwm.set_pwm(3, 1, int(nu))
-    def thruster200BP5(self, axis, n, d):
+    def thruster200BLP5(self, pwm, axis, n, d):
         nu = n
         axis *= d
         nu += axis
         pwm.set_pwm(4, 1, int(nu))
-    def thruster200BP6(self, axis, n, d):
+    def thruster200BRP6(self, pwm, axis, n, d):
         nu = n
         axis *= d
         nu += axis
         pwm.set_pwm(5, 1, int(nu))
-
-    def camServoP7(self, button1, button2):
-        if button1:
-            Skit.servo[4].angle = 180 #change this for the actual test
-        elif button2:
-            Skit.servo[4].angle = 0 #change this too
 
     def stopAllMotors(n1, off):
         for i in range(6):
@@ -160,7 +154,7 @@ class controlsClass(Mkit, Skit, pwm):
             for i in range(6):
                 pwm.set_pwm(i, 0, int(0))
             
-    def claw (self, button1, button2):
+    def claw (self, Mkit, button1, button2):
         if button1:
             Mkit.motor1.throttle = 1.0
         elif button2:
@@ -206,9 +200,8 @@ except:
 
 time.sleep(1)
 
-
 #initializing controls class
-controls = controlsClass(Mkit, Skit, pwm)
+controls = controlsClass()
 
 #creating a socket and then setting it to resuse the port when shut down
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -256,40 +249,37 @@ while True:
     A, B, X, Y, LH, RH, DU, DD, DL, DR, LB, RB, LX, LY, RX, RY, LT, RT = setControllerVar(data)
 
     #claw controls (RB out, LB in)
-    controls.claw(RB, LB)
+    controls.claw(Mkit, RB, LB)
 
     #moving up or down
-    controls.thruster200FP3(LY, n1, d1)
-    controls.thruster200FP4(LY, n1, d1)
-    controls.thruster200BP5(LY, n1, d1)
-    controls.thruster200BP6(LY, n1, d1)
+    controls.thruster200FP3(pwm, LY, n1, d1)
+    controls.thruster200FP4(pwm, LY, n1, d1)
+    controls.thruster200BP5(pwm, LY, n1, d1)
+    controls.thruster200BP6(pwm, LY, n1, d1)
 
     #yawing left to right
-    controls.thruster100LP1(LX, n1, d1)
-    controls.thruster100RP2((-LX), n1, d1)
+    controls.thruster100LP1(pwm, LX, n1, d1)
+    controls.thruster100RP2(pwm, (-LX), n1, d1)
 
     #side motors forawrd or backward
     if LT and not RT:
-        controls.thruster100LP1((-LT), n1, d1)
-        controls.thruster100RP2((-LT), n1, d1)
+        controls.thruster100LP1(pwm, (-LT), n1, d1)
+        controls.thruster100RP2(pwm, (-LT), n1, d1)
     elif RT and not RT:
-        controls.thruster100LP1(RT, n1, d1)
-        controls.thruster100RP2(RT, n1, d1)
+        controls.thruster100LP1(pwm, RT, n1, d1)
+        controls.thruster100RP2(pwm, RT, n1, d1)
 
     #pitching foward and backward
-    if (RY > 0):
-        controls.thruster200FP3((-RY), n1, d1)
-        controls.thruster200FP4((-RY), n1, d1)
-        controls.thruster200BP5(RY, n1, d1)
-        controls.thruster200BP6(RY, n1, d1)
-    elif (RY < 0):
-        controls.thruster200FP3(RY, n1, d1)
-        controls.thruster200FP4(RY, n1, d1)
-        controls.thruster200BP5((-RY), n1, d1)
-        controls.thruster200BP6((-RY), n1, d1)
+    controls.thruster200FLP3(pwm, (-RY), n1, d1)
+    controls.thruster200FRP4(pwm, (-RY), n1, d1)
+    controls.thruster200BLP5(pwm, RY, n1, d1)
+    controls.thruster200BRP6(pwm, RY, n1, d1)
 
     #roll side to side
-    if (RX)
+    controls.thruster200FLP3(pwm, RX, n1, d1)
+    controls.thruster200FRP4(pwm, (-RX), n1, d1)
+    controls.thruster200BLP5(pwm, RX, n1, d1)
+    controls.thruster200BRP6(pwm, (-RX), n1, d1)
     
 #cleaning up everything at the end
 s.close()
