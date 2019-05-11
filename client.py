@@ -110,47 +110,49 @@ def read_temp():
 #this class contains all the control methods such as for the claw, motors and lights
 class controlsClass():
     #P1 and P2 are forward and backward thrusters
-    def thruster100LP1(self, pwm, axis, n, d):
-        nu = n
-        axis *= d
-        nu += axis
-        if axis:
+
+    """
+    credit for the normalization of xbox controls to thruster control goes to Evan K.
+    """
+    
+    def thruster100L(self, pwm, LT, RT, RX, n, d):
+        nu = max(min(((d*(RT-LT))*(abs(RX)+1)+(d*RX)), d), -d)+n
+        if nu != n:
             pwm.set_pwm(0, 1, int(nu))
-    def thruster100RP2(self, pwm, axis, n, d):
-        nu = n
-        axis *= d
-        nu += axis
-        if axis:
+        print(nu, end = " ")
+    def thruster100R(self, pwm, LT, RT, RX, n, d):
+        nu = max(min(((d*(RT-LT))*(abs(RX)+1)-(d*RX)), d), -d)+n
+        if nu != n:
             pwm.set_pwm(1, 1, int(nu))
-
+        print(nu, end = " ") 
+        
     #P3 to P6 are up and down thrusters
-    def thruster200FLP3(self, pwm, axis, n, d):
-        nu = n
-        axis *= d
-        nu += axis
-        if axis:
-            pwm.set_pwm(2, 1, int(nu))
-    def thruster200FRP4(self, pwm, axis, n, d):
-        nu = n
-        axis *= d
-        nu += axis
-        pwm.set_pwm(3, 1, int(nu))
-    def thruster200BLP5(self, pwm, axis, n, d):
-        nu = n
-        axis *= d
-        nu += axis
-        pwm.set_pwm(4, 1, int(nu))
-    def thruster200BRP6(self, pwm, axis, n, d):
-        nu = n
-        axis *= d
-        nu += axis
-        pwm.set_pwm(5, 1, int(nu))
+    def thruster200FL(self, pwm, LX, LY, RY, n, d):
+        nu = max(min(((d*LY)/(abs((LX-RY)/2)+1)-(d*((LX-RY)/2))), d), -d)+n
+        if nu!= n:
+                 pwm.set_pwm(2, 1, int(nu))
+        print(nu, end = " ") 
+    def thruster200FR(self, pwm, LX, LY, RY, axis, n, d):
+        nu = max(min(((d*LY)/(abs((-LX-RY)/2)+1)-(d*((-LX-RY)/2))), d), -d)+n
+        if nu!= n:
+                 pwm.set_pwm(3, 1, int(nu))
+        print(nu, end = " ") 
+    def thruster200BL(self, pwm, LX, LY, RY, axis, n, d):
+        nu = max(min(((d*LY)/(abs((LX+RY)/2)+1)-(d*((LX+RY)/2))), d), -d)+n
+        if nu!= n:
+                 pwm.set_pwm(4, 1, int(nu))
+        print(nu, end = " ") 
+    def thruster200BR(self, pwm, LX, LY, RY, axis, n, d):
+        nu = max(min(((d*LY)/(abs((-LX+RY)/2)+1)-(d*((-LX+RY)/2))), d), -d)+n
+        if nu!= n:
+                 pwm.set_pwm(5, 1, int(nu))
+        print(nu) 
 
-    def stopAllMotors(n1, off):
+    def stopAllMotors(self, n1, off):
         for i in range(6):
             pwm.set_pwm(i, 1, int(n1))
-        time.sleep(1)
         if off:
+            time.sleep(1)
             for i in range(6):
                 pwm.set_pwm(i, 0, int(0))
             
@@ -224,26 +226,29 @@ except socket.error as msg:
 #then sending respective input to the cntroller class which operates motors
 while True:
     data = s.recv(1024)
-    data = data.decode('utf-6')
+    data = data.decode('utf-8')
     
     #this disconnects the client (this device) from the server
     print("")
     if (data == "KILL"):
-        stopAllMotors(n1, 1)
+        controls.stopAllMotors(n1, 1)
         break
     
     #this is to set motors to stop when the controller is disconnected
     elif (data == "HOLD"):
-        stopAllMotors(n1, 0)
+        controls.stopAllMotors(n1, 0)
         break #change this for actual test
 
     #the data is split up into an array of integers and floating point values
     try:
         data = splitData(data)
+        """
         for i in range(len(data)):
             print(str(data[i]), end=" ")
+        """
     except:
         print("No Data")
+
 
     #button names are added for easy access
     A, B, X, Y, LH, RH, DU, DD, DL, DR, LB, RB, LX, LY, RX, RY, LT, RT = setControllerVar(data)
@@ -251,35 +256,15 @@ while True:
     #claw controls (RB out, LB in)
     controls.claw(Mkit, RB, LB)
 
-    #moving up or down
-    controls.thruster200FP3(pwm, LY, n1, d1)
-    controls.thruster200FP4(pwm, LY, n1, d1)
-    controls.thruster200BP5(pwm, LY, n1, d1)
-    controls.thruster200BP6(pwm, LY, n1, d1)
+    #yaw and forward/backward
+    controls.thruster100L(pwm, LT, RT, RX, n1, d1)
+    controls.thruster100R(pwm, LT, RT, RX, n1, d1)
 
-    #yawing left to right
-    controls.thruster100LP1(pwm, LX, n1, d1)
-    controls.thruster100RP2(pwm, (-LX), n1, d1)
-
-    #side motors forawrd or backward
-    if LT and not RT:
-        controls.thruster100LP1(pwm, (-LT), n1, d1)
-        controls.thruster100RP2(pwm, (-LT), n1, d1)
-    elif RT and not RT:
-        controls.thruster100LP1(pwm, RT, n1, d1)
-        controls.thruster100RP2(pwm, RT, n1, d1)
-
-    #pitching foward and backward
-    controls.thruster200FLP3(pwm, (-RY), n1, d1)
-    controls.thruster200FRP4(pwm, (-RY), n1, d1)
-    controls.thruster200BLP5(pwm, RY, n1, d1)
-    controls.thruster200BRP6(pwm, RY, n1, d1)
-
-    #roll side to side
-    controls.thruster200FLP3(pwm, RX, n1, d1)
-    controls.thruster200FRP4(pwm, (-RX), n1, d1)
-    controls.thruster200BLP5(pwm, RX, n1, d1)
-    controls.thruster200BRP6(pwm, (-RX), n1, d1)
+    #pitching, rolling and vertical thrust
+    controls.thruster200FL(pwm, LX, LY,RY, n1, d1)
+    controls.thruster200FR(pwm, LX, LY,RY, n1, d1)
+    controls.thruster200BL(pwm, LX, LY,RY, n1, d1)
+    controls.thruster200BR(pwm, LX, LY,RY, n1, d1)
     
 #cleaning up everything at the end
 s.close()
